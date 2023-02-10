@@ -197,7 +197,7 @@ if(NOT TBB_FOUND)
   ##################################
 
   if(TBB_INCLUDE_DIRS)
-    file(READ "${TBB_INCLUDE_DIRS}/tbb/tbb_stddef.h" _tbb_version_file)
+    file(READ "${TBB_INCLUDE_DIRS}/oneapi/tbb/version.h" _tbb_version_file)
     string(REGEX REPLACE ".*#define TBB_VERSION_MAJOR ([0-9]+).*" "\\1"
         TBB_VERSION_MAJOR "${_tbb_version_file}")
     string(REGEX REPLACE ".*#define TBB_VERSION_MINOR ([0-9]+).*" "\\1"
@@ -221,13 +221,19 @@ if(NOT TBB_FOUND)
   foreach(_comp ${TBB_SEARCH_COMPOMPONENTS})
     if(";${TBB_FIND_COMPONENTS};tbb;" MATCHES ";${_comp};")
 
+      if (_comp STREQUAL "tbb" AND CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        set(_comp_search "tbb12")
+      else()
+        set(_comp_search _comp)
+      endif()
+
       # Search for the libraries
-      find_library(TBB_${_comp}_LIBRARY_RELEASE ${_comp}
+      find_library(TBB_${_comp}_LIBRARY_RELEASE ${_comp_search}
           HINTS ${TBB_LIBRARY} ${TBB_SEARCH_DIR}
           PATHS ${TBB_DEFAULT_SEARCH_DIR} ENV LIBRARY_PATH
           PATH_SUFFIXES ${TBB_LIB_PATH_SUFFIX})
 
-      find_library(TBB_${_comp}_LIBRARY_DEBUG ${_comp}_debug
+      find_library(TBB_${_comp}_LIBRARY_DEBUG ${_comp_search}_debug
           HINTS ${TBB_LIBRARY} ${TBB_SEARCH_DIR}
           PATHS ${TBB_DEFAULT_SEARCH_DIR} ENV LIBRARY_PATH
           PATH_SUFFIXES ${TBB_LIB_PATH_SUFFIX})

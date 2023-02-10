@@ -349,12 +349,15 @@ private:
                 bool operator!=(ZeroCopySource const &other) const {
                     return !(*this == other);
                 }
-                friend size_t tbb_hasher(ZeroCopySource const &z) {
-                    size_t seed = reinterpret_cast<uintptr_t>(z._addr);
-                    boost::hash_combine(seed, z._numBytes);
-                    return seed;
-                }
-                
+
+                struct TbbHasher {
+                    size_t operator()(ZeroCopySource const& z) const {
+                        size_t seed = reinterpret_cast<uintptr_t>(z._addr);
+                        boost::hash_combine(seed, z._numBytes);
+                        return seed;
+                    }
+                };
+
                 // Return true if the refcount is nonzero.
                 bool IsInUse() const { return _refCount; }
                 
@@ -421,7 +424,7 @@ private:
             ArchConstFileMapping _mapping;
             char const *_start;
             int64_t _length;
-            tbb::concurrent_unordered_set<ZeroCopySource> _outstandingRanges;
+            tbb::concurrent_unordered_set<ZeroCopySource, ZeroCopySource::TbbHasher> _outstandingRanges;
         };
 
     public:

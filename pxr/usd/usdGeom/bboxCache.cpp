@@ -98,11 +98,11 @@ public:
     explicit operator bool() const {
         return _owner;
     }
-    void operator()() {
+    void operator()() const {
         // Do not save state here; all state should be accumulated externally.
         _owner->_ResolvePrim(this, _primContext, _inverseComponentCtm);
     }
-    _ThreadXformCache* GetXformCaches() { return _xfCaches; }
+    _ThreadXformCache* GetXformCaches() const { return _xfCaches; }
 };
 
 // -------------------------------------------------------------------------- //
@@ -1179,7 +1179,7 @@ UsdGeomBBoxCache::_GetBBoxFromExtentsHint(
 }
 
 void
-UsdGeomBBoxCache::_ResolvePrim(_BBoxTask* task,
+UsdGeomBBoxCache::_ResolvePrim(const _BBoxTask* task,
                                const _PrimContext &primContext,
                                const GfMatrix4d &inverseComponentCtm)
 {

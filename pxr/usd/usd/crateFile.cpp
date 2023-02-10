@@ -3604,8 +3604,8 @@ CrateFile::_ReadPathsImpl(Reader reader,
                 // Branch off a parallel task for the sibling subtree.
                 auto siblingOffset = reader.template Read<int64_t>();
                 dispatcher.Run(
-                    [this, reader,
-                     siblingOffset, &dispatcher, parentPath]() mutable {
+                    [this, &reader,
+                     siblingOffset, &dispatcher, parentPath]() {
                         // XXX Remove these tags when bug #132031 is addressed
                         TfAutoMallocTag tag(
                             "Usd", "Usd_CrateDataImpl::Open",
@@ -3731,7 +3731,7 @@ CrateFile::_BuildDecompressedPathsImpl(
 #endif
                 dispatcher.Run(
                     [this, &pathIndexes, &elementTokenIndexes, &jumps,
-                     siblingIndex, &dispatcher, parentPath]() mutable {
+                     siblingIndex, &dispatcher, parentPath] {
                         // XXX Remove these tags when bug #132031 is addressed
                         TfAutoMallocTag tag(
                             "Usd", "Usd_CrateDataImpl::Open",

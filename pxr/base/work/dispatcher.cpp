@@ -21,6 +21,8 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+// NOTE(TBB MIGRATION): root_task usage and task scheduling was reworked in accordance to official migration
+//  guide: https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Migration_Guide/Task_Scheduler_Init.html
 
 #include "pxr/pxr.h"
 #include "pxr/base/work/dispatcher.h"
@@ -30,37 +32,27 @@ PXR_NAMESPACE_OPEN_SCOPE
 WorkDispatcher::WorkDispatcher()
     : _context(
         tbb::task_group_context::isolated,
-        tbb::task_group_context::concurrent_wait | 
-        tbb::task_group_context::default_traits)
+        tbb::task_group_context::concurrent_wait |
+        tbb::task_group_context::default_traits),
+      _taskGroup(_context)
 {
     _waitCleanupFlag.clear();
-    
-    // The concurrent_wait flag used with the task_group_context ensures
-    // the ref count will remain at 1 after all predecessor tasks are
-    // completed, so we don't need to keep resetting it in Wait().
-    _rootTask = new(tbb::task::allocate_root(_context)) tbb::empty_task;
-    _rootTask->set_ref_count(1);
 }
 
 WorkDispatcher::~WorkDispatcher()
 {
     Wait();
-    tbb::task::destroy(*_rootTask);
 }
 
 void
 WorkDispatcher::Wait()
 {
     // Wait for tasks to complete.
-    _rootTask->wait_for_all();
+    // NOTE(TBB MIGRATION): context is being reset inside task_group::wait()
+    _taskGroup.wait();
 
     // If we take the flag from false -> true, we do the cleanup.
-    if (_waitCleanupFlag.test_and_set() == false) {
-        // Reset the context if canceled.
-        if (_context.is_group_execution_cancelled()) {
-            _context.reset();
-        }
-
+    if (!_waitCleanupFlag.test_and_set()) {
         // Post all diagnostics to this thread's list.
         for (auto &et: _errors) {
             et.Post();

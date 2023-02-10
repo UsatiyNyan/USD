@@ -803,15 +803,16 @@ private:
                 liveFieldSets[FieldSetIndex(fsBegin-fieldSets.begin())];
                     
             dispatcher.Run(
-                [this, fsBegin, fsEnd, &fields, &fieldValuePairs]() mutable {
+                [this, fsBegin, fsEnd, &fields, &fieldValuePairs] {
                     // XXX Won't need first two tags when bug #132031 is
                     // addressed
                     TfAutoMallocTag tag(
                         "Usd", "Usd_CrateDataImpl::Open", "field data");
                     auto &pairs = fieldValuePairs.GetMutable();
                     pairs.resize(fsEnd-fsBegin);
-                    for (size_t i = 0; fsBegin != fsEnd; ++fsBegin, ++i) {
-                        auto const &field = fields[fsBegin->value];
+                    auto fsIt = fsBegin;
+                    for (size_t i = 0; fsIt != fsEnd; ++fsIt, ++i) {
+                        auto const &field = fields[fsIt->value];
                         pairs[i].first = _crateFile->GetToken(field.tokenIndex);
                         pairs[i].second = _UnpackForField(field.valueRep);
                     }

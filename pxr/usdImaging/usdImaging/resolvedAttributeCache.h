@@ -300,7 +300,7 @@ private:
 
         query_type query;
         value_type value;
-        tbb::atomic<unsigned> version;
+        std::atomic<unsigned> version;
     };
 
     // Returns the version number for a valid cache entry
@@ -340,7 +340,7 @@ private:
 
     // A serial number indicating the valid state of entries in the cache. When
     // an entry has an equal or greater value, the entry is valid.
-    tbb::atomic<unsigned> _cacheVersion;
+    std::atomic<unsigned> _cacheVersion;
 
     // Value overrides for a set of descendents.
     ValueOverridesMap _valueOverrides;

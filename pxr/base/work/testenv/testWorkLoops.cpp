@@ -35,6 +35,7 @@
 #include <functional>
 
 #include <cstdio>
+#include <cstring>
 #include <numeric>
 #include <iostream>
 #include <vector>
@@ -167,7 +168,7 @@ _DoSignatureTest()
 int
 main(int argc, char **argv)
 {
-    const bool perfMode = ((argc > 1) && !strcmp(argv[1], "--perf")); 
+    const bool perfMode = ((argc > 1) && !std::strcmp(argv[1], "--perf"));
     const size_t arraySize = 1000000;
     const size_t numIterations = perfMode ? 1000 : 1;
 

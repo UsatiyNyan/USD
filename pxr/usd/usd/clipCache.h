@@ -21,6 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+// NOTE(TBB MIGRATION): tbb::mutex was replaced with std::mutex in accordance with official doc:
+//  https://www.intel.com/content/dam/develop/external/us/en/documents/tbbrevamp.pdf
+
 #ifndef PXR_USD_USD_CLIP_CACHE_H
 #define PXR_USD_USD_CLIP_CACHE_H
 
@@ -30,7 +33,7 @@
 #include "pxr/usd/usd/clipSet.h"
 #include "pxr/usd/sdf/pathTable.h"
 
-#include <tbb/mutex.h>
+#include <mutex>
 #include <vector>
 
 PXR_NAMESPACE_OPEN_SCOPE
@@ -61,7 +64,7 @@ public:
         explicit ConcurrentPopulationContext(Usd_ClipCache &cache);
         ~ConcurrentPopulationContext();
         Usd_ClipCache &_cache;
-        tbb::mutex _mutex;
+        std::mutex _mutex;
     };
 
     /// Populate the cache with clips for \p prim. Returns true if clips

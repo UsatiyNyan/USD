@@ -21,6 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+// NOTE(TBB MIGRATION): root_task usage and task scheduling was reworked in accordance to official migration
+//  guide: https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Migration_Guide/Task_Scheduler_Init.html
+
 #ifndef PXR_BASE_WORK_DISPATCHER_H
 #define PXR_BASE_WORK_DISPATCHER_H
 
@@ -34,7 +37,7 @@
 #include "pxr/base/tf/errorTransport.h"
 
 #include <tbb/concurrent_vector.h>
-#include <tbb/task.h>
+#include <tbb/task_group.h>
 
 #include <functional>
 #include <type_traits>
@@ -79,7 +82,7 @@ public:
     WORK_API WorkDispatcher();
 
     /// Wait() for any pending tasks to complete, then destroy the dispatcher.
-    WORK_API ~WorkDispatcher();
+    WORK_API ~WorkDispatcher() noexcept;
 
     WorkDispatcher(WorkDispatcher const &) = delete;
     WorkDispatcher &operator=(WorkDispatcher const &) = delete;
@@ -103,7 +106,12 @@ public:
 
     template <class Callable>
     inline void Run(Callable &&c) {
-        _rootTask->spawn(_MakeInvokerTask(std::forward<Callable>(c)));
+        _taskGroup.run([this, _c = std::forward<Callable>(c)] {
+            TfErrorMark m;
+            _c();
+            if (!m.IsClean())
+                WorkDispatcher::_TransportErrors(m, &_errors);
+        });
     }
 
     template <class Callable, class A0, class ... Args>
@@ -133,38 +141,6 @@ public:
 private:
     typedef tbb::concurrent_vector<TfErrorTransport> _ErrorTransports;
 
-    // Function invoker helper that wraps the invocation with an ErrorMark so we
-    // can transmit errors that occur back to the thread that Wait() s for tasks
-    // to complete.
-    template <class Fn>
-    struct _InvokerTask : public tbb::task {
-        explicit _InvokerTask(Fn &&fn, _ErrorTransports *err) 
-            : _fn(std::move(fn)), _errors(err) {}
-
-        explicit _InvokerTask(Fn const &fn, _ErrorTransports *err) 
-            : _fn(fn), _errors(err) {}
-
-        virtual tbb::task* execute() {
-            TfErrorMark m;
-            _fn();
-            if (!m.IsClean())
-                WorkDispatcher::_TransportErrors(m, _errors);
-            return NULL;
-        }
-    private:
-        Fn _fn;
-        _ErrorTransports *_errors;
-    };
-
-    // Make an _InvokerTask instance, letting the function template deduce Fn.
-    template <class Fn>
-    _InvokerTask<typename std::remove_reference<Fn>::type>&
-    _MakeInvokerTask(Fn &&fn) { 
-        return *new( _rootTask->allocate_additional_child_of(*_rootTask) )
-            _InvokerTask<typename std::remove_reference<Fn>::type>(
-                std::forward<Fn>(fn), &_errors);
-    }
-
     // Helper function that removes errors from \p m and stores them in a new
     // entry in \p errors.
     WORK_API static void
@@ -173,7 +149,7 @@ private:
     // Task group context and associated root task that allows us to cancel
     // tasks invoked directly by this dispatcher.
     tbb::task_group_context _context;
-    tbb::empty_task* _rootTask;
+    tbb::task_group _taskGroup;
 
     // The error transports we use to transmit errors in other threads back to
     // this thread.

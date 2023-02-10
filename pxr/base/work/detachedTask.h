@@ -21,6 +21,9 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+// NOTE(TBB MIGRATION): root_task usage and task scheduling was reworked in accordance to official migration
+//  guide: https://oneapi-src.github.io/oneTBB/main/tbb_userguide/Migration_Guide/Task_Scheduler_Init.html
+
 #ifndef PXR_BASE_WORK_DETACHED_TASK_H
 #define PXR_BASE_WORK_DETACHED_TASK_H
 
@@ -41,7 +44,7 @@ struct Work_DetachedTask
 {
     explicit Work_DetachedTask(Fn &&fn) : _fn(std::move(fn)) {}
     explicit Work_DetachedTask(Fn const &fn) : _fn(fn) {}
-    void operator()() {
+    void operator()() const {
         TfErrorMark m;
         _fn();
         m.Clear();

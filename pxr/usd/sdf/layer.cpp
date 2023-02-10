@@ -214,7 +214,7 @@ SdfLayer::SdfLayer(
     _MarkCurrentStateAsClean();
 }
 
-SdfLayer::~SdfLayer()
+SdfLayer::~SdfLayer() noexcept
 {
     TF_DEBUG(SDF_LAYER).Msg(
         "SdfLayer::~SdfLayer('%s')\n", GetIdentifier().c_str());

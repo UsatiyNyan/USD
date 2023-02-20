@@ -21,6 +21,11 @@
 // KIND, either express or implied. See the Apache License for the specific
 // language governing permissions and limitations under the Apache License.
 //
+// NOTE(TBB MIGRATION): tbb::mutex was replaced with std::mutex in accordance with official doc:
+//  https://www.intel.com/content/dam/develop/external/us/en/documents/tbbrevamp.pdf
+//  std::lock_guard can't "acquire" mutex separately from it's c-tor,
+//  so to be able to "acquire" lock std::lock_guard was used together with boost::optional
+
 #include "pxr/pxr.h"
 #include "pxr/usd/usd/clipCache.h"
 
@@ -40,6 +45,8 @@
 #include "pxr/base/tf/diagnostic.h"
 #include "pxr/base/tf/mallocTag.h"
 #include "pxr/base/tf/ostreamMethods.h"
+
+#include <boost/optional.hpp>
 
 #include <string>
 #include <unordered_map>
@@ -218,9 +225,10 @@ Usd_ClipCache::PopulateClipsForPrim(
     const bool primHasClips = !allClips.empty();
     if (primHasClips) {
         TRACE_SCOPE("Usd_ClipCache::PopulateClipsForPrim (primHasClips)");
-        tbb::mutex::scoped_lock lock;
+
+        boost::optional<std::lock_guard<std::mutex>> lock;
         if (_concurrentPopulationContext) {
-            lock.acquire(_concurrentPopulationContext->_mutex);
+            lock.emplace(_concurrentPopulationContext->_mutex);
         }
 
         // Find nearest ancestor with clips specified.
@@ -260,9 +268,9 @@ Usd_ClipCache::PopulateClipsForPrim(
 SdfLayerHandleSet
 Usd_ClipCache::GetUsedLayers() const
 {
-    tbb::mutex::scoped_lock lock;
+    boost::optional<std::lock_guard<std::mutex>> lock;
     if (_concurrentPopulationContext) {
-        lock.acquire(_concurrentPopulationContext->_mutex);
+        lock.emplace(_concurrentPopulationContext->_mutex);
     }
     SdfLayerHandleSet layers;
     for (_ClipTable::iterator::value_type const &clipsListIter : _table){
@@ -342,9 +350,9 @@ const std::vector<Usd_ClipSetRefPtr>&
 Usd_ClipCache::GetClipsForPrim(const SdfPath& path) const
 {
     TRACE_FUNCTION();
-    tbb::mutex::scoped_lock lock;
+    boost::optional<std::lock_guard<std::mutex>> lock;
     if (_concurrentPopulationContext) {
-        lock.acquire(_concurrentPopulationContext->_mutex);
+        lock.emplace(_concurrentPopulationContext->_mutex);
     }
     return _GetClipsForPrim_NoLock(path);
 }

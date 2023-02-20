@@ -98,11 +98,11 @@ public:
     explicit operator bool() const {
         return _owner;
     }
-    void operator()() {
+    void operator()() const {
         // Do not save state here; all state should be accumulated externally.
         _owner->_ResolvePrim(this, _primContext, _inverseComponentCtm);
     }
-    _ThreadXformCache* GetXformCaches() { return _xfCaches; }
+    _ThreadXformCache* GetXformCaches() const { return _xfCaches; }
 };
 
 // -------------------------------------------------------------------------- //
@@ -125,9 +125,24 @@ private:
     {
         _PrototypeTask() : numDependencies(0) { }
 
+        // NOTE(TBB MIGRATION): tbb::atomic to std::atomic
+        //  copy c-tor and operator= are used in TFHashMap::insert(const T& value)
+        //  tbb::atomic had copy c-tor, but std::atomic does not
+        //  that's why we need to define it here
+        _PrototypeTask(const _PrototypeTask &other)
+                : numDependencies{other.numDependencies.load()},
+                  dependentPrototypes{other.dependentPrototypes} {}
+        _PrototypeTask& operator=(const _PrototypeTask &other) {
+            if (this == &other) {
+                return *this;
+            }
+            numDependencies = other.numDependencies.load();
+            dependentPrototypes = other.dependentPrototypes;
+        }
+
         // Number of dependencies -- prototype prims that must be resolved
         // before this prototype can be resolved.
-        tbb::atomic<size_t> numDependencies;
+        std::atomic<size_t> numDependencies;
 
         // List of prototype prims that depend on this prototype.
         std::vector<_PrimContext> dependentPrototypes;
@@ -218,8 +233,7 @@ private:
                  prototypeData.dependentPrototypes) {
             _PrototypeTask& dependentPrototypeData =
                 prototypeTasks->find(dependentPrototype)->second;
-            if (dependentPrototypeData.numDependencies
-                .fetch_and_decrement() == 1){
+            if (dependentPrototypeData.numDependencies.fetch_sub(1) == 1) {
                 dispatcher->Run(
                     &_PrototypeBBoxResolver::_ExecuteTaskForPrototype,
                     this, dependentPrototype, prototypeTasks, xfCaches,
@@ -1165,7 +1179,7 @@ UsdGeomBBoxCache::_GetBBoxFromExtentsHint(
 }
 
 void
-UsdGeomBBoxCache::_ResolvePrim(_BBoxTask* task,
+UsdGeomBBoxCache::_ResolvePrim(const _BBoxTask* task,
                                const _PrimContext &primContext,
                                const GfMatrix4d &inverseComponentCtm)
 {

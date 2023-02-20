@@ -3604,13 +3604,15 @@ CrateFile::_ReadPathsImpl(Reader reader,
                 // Branch off a parallel task for the sibling subtree.
                 auto siblingOffset = reader.template Read<int64_t>();
                 dispatcher.Run(
-                    [this, reader,
-                     siblingOffset, &dispatcher, parentPath]() mutable {
+                    [this, reader, siblingOffset, &dispatcher, parentPath] {
                         // XXX Remove these tags when bug #132031 is addressed
                         TfAutoMallocTag tag(
                             "Usd", "Usd_CrateDataImpl::Open",
                             "Usd_CrateFile::CrateFile::Open", "_ReadPaths");
-                        reader.Seek(siblingOffset);
+                        // NOTE(TBB MIGRATION): tbb::task_group::run does not allow mutable functors
+                        //  "const_cast" is justifiable here, since this functor was "mutable"
+                        //  only for this "reader" to be used as non-const.
+                        const_cast<Reader &>(reader).Seek(siblingOffset);
                         _ReadPathsImpl<Header>(reader, dispatcher, parentPath);
                     });
             }
@@ -3731,7 +3733,7 @@ CrateFile::_BuildDecompressedPathsImpl(
 #endif
                 dispatcher.Run(
                     [this, &pathIndexes, &elementTokenIndexes, &jumps,
-                     siblingIndex, &dispatcher, parentPath]() mutable {
+                     siblingIndex, &dispatcher, parentPath] {
                         // XXX Remove these tags when bug #132031 is addressed
                         TfAutoMallocTag tag(
                             "Usd", "Usd_CrateDataImpl::Open",

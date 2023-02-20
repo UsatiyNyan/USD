@@ -30,11 +30,6 @@
 PXR_NAMESPACE_OPEN_SCOPE
 
 WorkDispatcher::WorkDispatcher()
-    : _context(
-        tbb::task_group_context::isolated,
-        tbb::task_group_context::concurrent_wait |
-        tbb::task_group_context::default_traits),
-      _taskGroup(_context)
 {
     _waitCleanupFlag.clear();
 }
@@ -69,7 +64,7 @@ WorkDispatcher::Wait()
 void
 WorkDispatcher::Cancel()
 {
-    _context.cancel_group_execution();
+    _taskGroup.cancel();
 }
 
 /* static */

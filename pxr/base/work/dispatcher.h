@@ -146,9 +146,6 @@ private:
     WORK_API static void
     _TransportErrors(const TfErrorMark &m, _ErrorTransports *errors);
 
-    // Task group context and associated root task that allows us to cancel
-    // tasks invoked directly by this dispatcher.
-    tbb::task_group_context _context;
     tbb::task_group _taskGroup;
 
     // The error transports we use to transmit errors in other threads back to
